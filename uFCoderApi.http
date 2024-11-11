@@ -1,0 +1,6 @@
+@uFCoderApi_HostAddress = http://localhost:5048
+
+GET {{uFCoderApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
