@@ -84,7 +84,95 @@ namespace uFCoderApi.Controllers
             readData = readData.Replace("\0", ""); // Remove null characters
             return Ok(new { Message = "Data read successfully.", Data = readData });
         }
+        [HttpPost("writeToMifareUltralight")]
+        public IActionResult WriteToMifareUltralight([FromBody] WriteMifareUltraCRequest request)
+        {
+            if (request == null || string.IsNullOrEmpty(request.Data) || request.PageNumber < 0)
+            {
+                return BadRequest("Invalid request parameters.");
+            }
 
+            DL_STATUS status;
+            byte[] writeData = new byte[4];
+            writeData = ToByteArray(request.Data); 
+
+            UInt16 writeAddress = (UInt16)request.PageNumber; 
+
+            if (request.AuthMode == "NO_AUTH")
+            {
+                status = uFCoder.BlockWrite(writeData, writeAddress, 0x60, 0);
+            }
+            else if (request.AuthMode == "RKA_AUTH")
+            {
+                byte keyIndex = Byte.Parse(request.KeyIndex);
+                status = uFCoder.BlockWrite(writeData, writeAddress, 0x61, keyIndex);
+            }
+            else if (request.AuthMode == "PK_AUTH")
+            {
+                byte[] key = ToByteArray(request.Key); // Convert the key string to a byte array
+                status = uFCoder.BlockWrite_PK(writeData, (byte)writeAddress, 0x61, key);
+            }
+            else
+            {
+                return BadRequest("Invalid authentication mode.");
+            }
+
+            if (status != DL_STATUS.UFR_OK)
+            {
+                return StatusCode(500, $"Error writing data to MIFARE card: {status}");
+            }
+
+            return Ok("Data written successfully.");
+        }
+        [HttpPost("readFromMifareUltralight")]
+        public IActionResult ReadFromMifareUltralight([FromBody] ReadMifareUltraCRequest request)
+        {
+            if (request == null || request.PageNumber < 0)
+            {
+                return BadRequest("Invalid request parameters.");
+            }
+
+            DL_STATUS status;
+            byte[] pageData = new byte[16];
+            byte[] showData = new byte[4];
+            UInt16 pageAddress = (UInt16)request.PageNumber;
+
+            if (request.AuthMode == "NO_AUTH")
+            {
+                status = uFCoder.BlockRead(pageData, pageAddress, 0x60, 0);
+            }
+            else if (request.AuthMode == "RKA_AUTH")
+            {
+                if (!byte.TryParse(request.KeyIndex, out byte keyIndex))
+                {
+                    return BadRequest("Invalid key index.");
+                }
+                status = uFCoder.BlockRead(pageData, pageAddress, 0x61, keyIndex);
+            }
+            else if (request.AuthMode == "PK_AUTH")
+            {
+                if (string.IsNullOrEmpty(request.Key))
+                {
+                    return BadRequest("Key is required for PK_AUTH.");
+                }
+                byte[] key = ToByteArray(request.Key); // Convert the key string to a byte array
+                status = uFCoder.BlockRead_PK(pageData, (byte)pageAddress, 0x61, key);
+            }
+            else
+            {
+                return BadRequest("Invalid authentication mode.");
+            }
+
+            if (status != DL_STATUS.UFR_OK)
+            {
+                return StatusCode(500, $"Error reading data from MIFARE card: {status}");
+            }
+
+            Array.Copy(pageData, showData, 4);
+            string readData = BitConverter.ToString(showData).Replace("-", ":");
+
+            return Ok(new { Data = readData });
+        }
         [HttpPost("encodeAndWrite")]
         public IActionResult EncodeAndWrite([FromBody] EncodeAndWriteRequest request)
         {
@@ -204,5 +292,31 @@ namespace uFCoderApi.Controllers
 
             return status;
         }
+        public static byte[] ToByteArray(string HexString)
+        {
+
+            int NumberChars = HexString.Length;
+            byte[] bytes = new byte[NumberChars / 2];
+
+            if (HexString.Length % 2 != 0)
+            {
+                return bytes;
+            }
+
+            for (int i = 0; i < NumberChars; i += 2)
+            {
+                try
+                {
+                    bytes[i / 2] = Convert.ToByte(HexString.Substring(i, 2), 16);
+                }
+                catch (System.FormatException)
+                {
+                    break;
+                }
+            }
+
+            return bytes;
+        }
+
     }
 }

@@ -256,6 +256,11 @@ namespace uFCoderMulti
         [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall, EntryPoint = "GetBuildNumber")]
         public static extern DL_STATUS GetBuildNumber(byte* build);
 
+        [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Auto, EntryPoint = "BlockRead")]
+        public static extern DL_STATUS BlockRead(byte[] data,
+                                             UInt16 block_address,
+                                             byte auth_mode,
+                                             byte key_index);
 
         [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall, EntryPoint = "BlockRead_PK")]
         public static extern DL_STATUS BlockRead_PK(byte[] data, byte block_address, byte auth_mode, byte[] key);
