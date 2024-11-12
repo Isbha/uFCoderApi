@@ -84,8 +84,8 @@ namespace uFCoderApi.Controllers
             readData = readData.Replace("\0", ""); // Remove null characters
             return Ok(new { Message = "Data read successfully.", Data = readData });
         }
-        [HttpPost("writeToMifareUltralight")]
-        public IActionResult WriteToMifareUltralight([FromBody] WriteMifareUltraCRequest request)
+        [HttpPost("writeToMifareUltralightc")]
+        public IActionResult WriteToMifareUltralightc([FromBody] WriteMifareUltraLightCRequest request)
         {
             if (request == null || string.IsNullOrEmpty(request.Data) || request.PageNumber < 0)
             {
@@ -109,7 +109,7 @@ namespace uFCoderApi.Controllers
             }
             else if (request.AuthMode == "PK_AUTH")
             {
-                byte[] key = ToByteArray(request.Key); // Convert the key string to a byte array
+                byte[] key = ToByteArray(request.Key); 
                 status = uFCoder.BlockWrite_PK(writeData, (byte)writeAddress, 0x61, key);
             }
             else
@@ -124,8 +124,8 @@ namespace uFCoderApi.Controllers
 
             return Ok("Data written successfully.");
         }
-        [HttpPost("readFromMifareUltralight")]
-        public IActionResult ReadFromMifareUltralight([FromBody] ReadMifareUltraCRequest request)
+        [HttpPost("readFromMifareUltralightc")]
+        public IActionResult ReadFromMifareUltralightc([FromBody] ReadMifareUltraLightCRequest request)
         {
             if (request == null || request.PageNumber < 0)
             {
@@ -155,7 +155,7 @@ namespace uFCoderApi.Controllers
                 {
                     return BadRequest("Key is required for PK_AUTH.");
                 }
-                byte[] key = ToByteArray(request.Key); // Convert the key string to a byte array
+                byte[] key = ToByteArray(request.Key); 
                 status = uFCoder.BlockRead_PK(pageData, (byte)pageAddress, 0x61, key);
             }
             else
