@@ -126,6 +126,7 @@ class SaltoHelper
 
                     if (char_response.Length > 0)
                     {
+
                         if (char_response[0] == ACK)
                         {
                             string[] split = temp_response.Split(cSEP);
@@ -257,7 +258,7 @@ class SaltoHelper
 
             string startDate = StartDate.ToString("hhmmddMMyy"); //Starting date and time of the card.
             string endDate = EndDate.ToString("hhmmddMMyy");  //Expiring date and time of the card.
-            string user = SourceSystem; //SourceSystem == null ? "Mirror" : SourceSystem;                  //Data of the operator who makes the request. Max. 24 characters.
+            string user = "";//SourceSystem == null ? "Mirror" : SourceSystem;                  //Data of the operator who makes the request. Max. 24 characters.
             string information1 = "";              //Information to be written on track #1.
             string information2 = "";              //Information to be written on track #2.
             string information3 = "";              //Information to be written on track #3.
@@ -295,55 +296,41 @@ class SaltoHelper
 
             }
 
-            // CardNumber = "E0B19B87";
+            //CardNumber = "E0B19B87";
+            CardNumber = "E012E9E7";
 
             // CardNumber += "000000";
             // +"000000"
 
 
-            string Message = cSEP + operation + cSEP + CardNumber + cSEP + Card_structure + cSEP + Room_Number + cSEP + Second_room + cSEP
-                                    + Third_room + cSEP + Fourth_room + cSEP + Authorisations_granted + cSEP + Authorisations_denied
-                                    + cSEP + startDate + cSEP + endDate + cSEP + user + cSEP + cSEP + cSEP + cSEP + cSEP + cSEP + ETX;
+            string Message = cSEP + operation + cSEP + CardNumber + cSEP + Card_structure + cSEP + Room_Number + cSEP + Second_room + cSEP + Third_room + cSEP + Fourth_room + cSEP + Authorisations_granted + cSEP + Authorisations_denied + cSEP + startDate + cSEP + endDate + cSEP + user + cSEP + cSEP + cSEP + cSEP + cSEP + cSEP + "" + ETX;
 
 
-            //information1 + cSEP + information2 
-            //+ cSEP + information3 + cSEP + Authorisation_code
-            //+ cSEP + "" + ETX;
-            //string Message = cSEP + operation + cSEP + CardNumber + cSEP + Card_structure + cSEP + Room_Number + cSEP + Second_room + cSEP
-            //                        + Third_room + cSEP + Fourth_room + cSEP + Authorisations_granted + cSEP + Authorisations_denied
-            //                        + cSEP + startDate + cSEP + endDate + cSEP + user + cSEP + information1 + cSEP + information2 
-            //                        + cSEP + information3 + cSEP + Authorisation_code
-            //                        + cSEP + "" + ETX;
+            //string Message = cSEP + operation + cSEP + CardNumber + cSEP + Card_structure + cSEP + Room_Number + cSEP + Second_room + cSEP+ Third_room + cSEP + Fourth_room + cSEP + Authorisations_granted + cSEP + Authorisations_denied + cSEP + startDate + cSEP + endDate + cSEP + user + cSEP + information1 + cSEP + information2 + cSEP + information3 + cSEP + Authorisation_code+ cSEP + "" + ETX;
 
-            ///System.IO.File.AppendAllText(System.Web.Hosting.HostingEnvironment.MapPath(@"~\log_Salto.txt"), $"Request Message : {Message}\n");
+            //string Message = $"³CNB³E7E912E0³1,11,12,13,14,15³101³"+ETX;
+
+            //string Message = "³CNB³E7E912E0³1,11,12,13,14,15³101³³³³³³³³³³³³³³"+""+ETX;
+            //string Message = "³CNB³E012E9E7³1,11,12,13,14,15³101³³³³³³³³³³³³³³" + "" + ETX;
+            //Message = "³CNB³E012E9E7³1,11,12,13,14,15³101³³³³³³³³³" + "" + ETX;
+            //Message = "³CNB³E012E9E7³1,11,12,13,14,15³101³" +""+ ETX;
+            //Message = "³CNB³E012E9E7³1,11,12,13,14,15³101³"+ETX;
+            //string Message = "CNB³E7E912E0³1,11,12,13,14,15³101³" + ETX;
+
 
             char LRC = CalculateLRC(Message);
-
             Message = STX + Message + LRC;
 
-        
-        //Message = "STX | CNB | E7E912E0 | 1, 14, 15 | 101 | ETX LRC";
-
-
-            //System.IO.File.AppendAllText(System.Web.Hosting.HostingEnvironment.MapPath(@"~\log_Salto.txt"), $"Request Message with LRC : {Message} \n");
-
             client = new TcpClient(Server_IP, port);
-
             NetworkStream nwStream = client.GetStream();
-
             byte[] bytesToSend = Encoding.Default.GetBytes(Message);
-
             nwStream.Write(bytesToSend, 0, bytesToSend.Length);//---send the text---
-
             byte[] bytesToRead = new byte[client.ReceiveBufferSize];
             int bytesRead = nwStream.Read(bytesToRead, 0, client.ReceiveBufferSize);
-
-
             //string temp_response = "³CNB³8F45A5C4³1,17,0,00C003000048EF48FF3FFCFFFFB710B7,17,1,FF818C001000B049FFFFFFFFFFFFFFFF,17,2,FFCB0EC581894EB4A8D4A278F0FDE5AA,16,0,D1C3006C0040000000000000D7FFFFFF,16,1,0030CF30BF9149BCFC27F30752D922F3,16,2,2BDE34E9E9FA4C8B709AA32D1CFF156A,15,0,9E3C8C71B121B266564DF53ABF02B769,15,1,FDB48A0AFFFFFFFFFFFFFFFFFFFFFFFF,15,2,FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF,14,0,FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF,14,1,FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF,14,2,00000000000000FFFFFFFFFFFFFFFFFF³";
-            //string temp_response = "ACK STX|CNB|8F45A5C4| 1,14, 0, 9A9D8F7E56F77DF1CB73B948A7B9C8D2, 14, 1, 8F2378B1CF6D90F61CB37AB61A00BAA1,15, 0, 1BB733A6D9012BD5EE4A905D51A7FF82,15, 1, CC9377A6F812D94667DAA8FB38F823DD,15, 2, 1790261512757657ADBDDD8A8BCFEDDC|ETX LRC";
             string temp_response = Encoding.Default.GetString(bytesToRead, 0, bytesRead);
-            //System.IO.File.AppendAllText(System.Web.Hosting.HostingEnvironment.MapPath(@"~\log_Salto.txt"), $"Response : {temp_response} \n");
 
+            //System.IO.File.AppendAllText(System.Web.Hosting.HostingEnvironment.MapPath(@"~\log_Salto.txt"), $"Response : {temp_response} \n");
 
             if (!string.IsNullOrEmpty(temp_response))
             {
@@ -361,14 +348,16 @@ class SaltoHelper
                         {
                             if (char_response[0] == ACK)
                             {
+
                                 if (bytesRead == 1)
                                 {
                                     bytesToRead = new byte[client.ReceiveBufferSize];
                                     bytesRead = nwStream.Read(bytesToRead, 0, client.ReceiveBufferSize);
                                     temp_response = Encoding.Default.GetString(bytesToRead, 0, bytesRead);
                                 }
+                                //temp_response = "\u0002³CNB³E7E912E0³1,15,0,00F800000048EF48FF07FFFFFFB710B7,15,1,FF817B001000E065FFFFFFFFFFFFFFFF,15,2,FFD10EDF817EB2177AB9C1DD27F7B173,14,0,F22D008C00C0000000000000FBFFFFFF,14,1,0026D9D75F78BC6644AEFB92FB0179F3,14,2,0478E57C7F9AA0603B52C75A9A1409BA,13,0,4273566F9ECFFEACDBFFFFFFFFFFFFFF,13,1,FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF,13,2,FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF,12,0,FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF,12,1,FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF,12,2,FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF,11,0,FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF,11,1,397999316077FFFFFFFFFFFFFFFFFFFF,11,2,00000000000000FFFFFFFFFFFFFFFFFF³\u0003j";
 
-                                string[] split = temp_response.Split('|');
+                                string[] split = temp_response.Split(cSEP);
                                 //System.IO.File.AppendAllText(System.Web.Hosting.HostingEnvironment.MapPath(@"~\log_Salto.txt"), $"split the response \n");
 
                                 if (split.Length > 0)
@@ -470,6 +459,8 @@ class SaltoHelper
                     ResponseMessage = "Response null from encoder "
                 };
             }
+
+
         }
         catch (Exception ex)
         {
@@ -489,8 +480,9 @@ class SaltoHelper
     {
         //byte[] bytes = Encoding.ASCII.GetBytes(toEncode);
         Char[] split = toEncode.ToCharArray();
-        char LRC = split[0];
-        for (int i = 1; i < split.Length; i++)
+        //char LRC = split[0];
+        char LRC = (char)0;
+        for (int i = 0; i < split.Length; i++)
         {
             LRC ^= split[i];
         }
@@ -507,6 +499,5 @@ public class Response
 
     public string CardNumber { get; set; }
     public string BinaryImage { get; set; }
-
 
 }

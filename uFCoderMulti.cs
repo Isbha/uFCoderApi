@@ -84,6 +84,12 @@ namespace uFCoderMulti
         MIFARE_AUTHENT1A = 0x60,
         MIFARE_AUTHENT1B = 0x61,
     }
+    // MIFARE PLUS AES Authentication Modes:
+    enum MIFARE_PLUS_AES_AUTHENTICATION
+    {
+        MIFARE_PLUS_AES_AUTHENT1A = 0x80,
+        MIFARE_PLUS_AES_AUTHENT1B = 0x81,
+    };
 
     enum T2T_AUTHENTICATION
     {
@@ -272,6 +278,21 @@ namespace uFCoderMulti
                                                     UInt16 block_address,
                                                     byte auth_mode,
                                                     byte key_index);
+        [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Auto, EntryPoint = "BlockWrite_PK")]
+        public static extern DL_STATUS BlockWrite_PK(byte[] data,
+                                                   UInt16 block_address,
+                                                   byte auth_mode,
+                                                   byte[] pk_key);
+
+        [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Auto, EntryPoint = "BlockRead_PK")]
+        public static extern DL_STATUS BlockRead_PK(byte[] data,
+                                                    UInt16 block_address,
+                                                    byte auth_mode,
+                                                    byte[] pk_key);
+        // Change the method signature to match what is expected in the uFCoder library (passing by reference)
+        [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall, EntryPoint = "ULC_write_3des_key_factory_keyM")]
+        public static extern DL_STATUS ULC_write_3des_key_factory_keyM(ref byte[] pk_key);
+
     }
 }
 
