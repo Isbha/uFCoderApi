@@ -11,8 +11,6 @@ namespace uFCoderApi.Controllers
     [ApiController]
     public class ReaderController : ControllerBase
     {
-
-
         [HttpPost("openConnection")]
         public IActionResult OpenReader([FromBody] ReaderOpenRequest request)
         {
@@ -93,13 +91,11 @@ namespace uFCoderApi.Controllers
                 return BadRequest("Invalid request parameters.");
             }
 
-            // Ensure the data is exactly 4 bytes long
             if (request.Data.Length != 4)
             {
                 return BadRequest("Data must be exactly 4 characters long.");
             }
 
-            // Ensure the key is in the expected 16-byte (32 hex digits) format
             if (request.Key.Length != 32)
             {
                 return BadRequest("Invalid key format. Key must be 16 bytes (32 hexadecimal characters).");
@@ -120,42 +116,70 @@ namespace uFCoderApi.Controllers
 
             return Ok("Data written successfully to the Ultralight C card.");
         }
+        [HttpPost("readFromUltralightC")]
+        public IActionResult ReadFromUltralight([FromBody] ReadMifareUltraLightCRequest request)
+        {
+            if (request == null || request.PageNumber < 0 || request.PageNumber > 43 || string.IsNullOrEmpty(request.Key))
+            {
+                return BadRequest("Invalid request parameters.");
+            }
 
-    [HttpPost("setUltralightCKey")]
-public IActionResult SetUltralightCKey()
-{
-    string hardcodedNewKeyHex = "A1B2C3D4E5F60123456789ABCDEF1234"; // Example key
+            if (request.Key.Length != 32)
+            {
+                return BadRequest("Invalid key format. Key must be 16 bytes (32 hexadecimal characters).");
+            }
+            byte[] showData = new byte[4];
 
-    byte[] newKey = ConvertHexStringToByteArray(hardcodedNewKeyHex);
+            DL_STATUS status;
+            byte[] key = ConvertHexStringToByteArray(request.Key);
+            byte pageAddress = (byte)request.PageNumber;
+            byte[] dataRead = new byte[4]; 
 
-    // Call the function using ref
-    DL_STATUS status = uFCoder.ULC_write_3des_key_factory_keyM(ref newKey);
+            status = uFCoder.BlockRead_PK(dataRead, pageAddress, (byte)MIFARE_PLUS_AES_AUTHENTICATION.MIFARE_PLUS_AES_AUTHENT1A, key);
 
-    if (status != DL_STATUS.UFR_OK)
-    {
-        return StatusCode(500, $"Failed to set the new key: Error Code {status}");
-    }
+            if (status != DL_STATUS.UFR_OK)
+            {
+                return StatusCode(500, $"Error reading data from the Ultralight C card: {status}");
+            }
+            string dataString = Encoding.ASCII.GetString(dataRead);
 
-    return Ok("New key successfully set on the Ultralight C card.");
-}
+            return Ok($"Data read successfully: {dataString}");
+        }
+
+
+        [HttpPost("setUltralightCKey")]
+        public IActionResult SetUltralightCKey()
+        {
+            string hardcodedNewKeyHex = "A1B2C3D4E5F60123456789ABCDEF1234"; 
+
+            byte[] newKey = ConvertHexStringToByteArray(hardcodedNewKeyHex);
+
+          
+            DL_STATUS status = uFCoder.ULC_write_3des_key_no_auth(newKey);
+
+            if (status != DL_STATUS.UFR_OK)
+            {
+                return StatusCode(500, $"Failed to set the new key: Error Code {status}");
+            }
+
+            return Ok("New key successfully set on the Ultralight C card.");
+        }
         [HttpPost("encodeAndWrite")]
-        public IActionResult EncodeAndWrite([FromBody] EncodeAndWriteRequest request)
+        public async Task<IActionResult> EncodeAndWrite([FromBody] EncodeAndWriteRequest request)
         {
             if (request == null ||
                 string.IsNullOrEmpty(request.Server_IP) ||
                 request.Port <= 0 ||
                 string.IsNullOrEmpty(request.CardNumber) ||
                 string.IsNullOrEmpty(request.Room_Number) ||
-                string.IsNullOrEmpty(request.SourceSystem) ||
-                string.IsNullOrEmpty(request.Authorisations_granted) ||
-                string.IsNullOrEmpty(request.Authorisations_denied))
+                string.IsNullOrEmpty(request.SourceSystem))
             {
                 return BadRequest("Invalid request parameters.");
             }
 
             SaltoHelper saltoHelper = new SaltoHelper();
 
-            Response encodeResponse = saltoHelper.Key_Encode_Binary(
+            Response encodeResponse = await saltoHelper.Key_Encode_Binary(
                 request.Server_IP,
                 request.Port,
                 request.CardNumber,
@@ -317,97 +341,4 @@ public IActionResult SetUltralightCKey()
     }
 }
 
-
-//[HttpPost("writeToMifareUltralightc")]
-//public IActionResult WriteToMifareUltralightc([FromBody] WriteMifareUltraLightCRequest request)
-//{
-//    if (request == null || string.IsNullOrEmpty(request.Data) || request.PageNumber < 0)
-//    {
-//        return BadRequest("Invalid request parameters.");
-//    }
-
-//    DL_STATUS status;
-//    byte[] writeData = new byte[4];
-//    writeData = ToByteArray(request.Data);
-
-//    UInt16 writeAddress = (UInt16)request.PageNumber;
-
-//    if (request.AuthMode == "NO_AUTH")
-//    {
-//        status = uFCoder.BlockWrite(writeData, writeAddress, 0x60, 0);
-//    }
-//    else if (request.AuthMode == "RKA_AUTH")
-//    {
-//        byte keyIndex = Byte.Parse(request.KeyIndex);
-//        status = uFCoder.BlockWrite(writeData, writeAddress, 0x61, keyIndex);
-//    }
-//    else if (request.AuthMode == "PK_AUTH")
-//    {
-//        //byte[] key = ToByteArray(request.Key);
-//        byte[] key = new byte[] { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05 }; // Example key (sequential bytes)
-//                                                                        //byte[] key = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF }; // 6 bytes
-//                                                                        //byte[] key = new byte[] { 0x42, 0x52, 0x45, 0x41, 0x4B, 0x4D, 0x45, 0x46, 0x49, 0x59, 0x4F, 0x55, 0x43, 0x41, 0x4E, 0x21 };
-//        status = uFCoder.BlockWrite_PK(writeData, writeAddress, 0x61, key);
-//    }
-//    else
-//    {
-//        return BadRequest("Invalid authentication mode.");
-//    }
-
-//    if (status != DL_STATUS.UFR_OK)
-//    {
-//        return StatusCode(500, $"Error writing data to MIFARE card: {status}");
-//    }
-
-//    return Ok("Data written successfully.");
-//}
-//[HttpPost("readFromMifareUltralightc")]
-//public IActionResult ReadFromMifareUltralightc([FromBody] ReadMifareUltraLightCRequest request)
-//{
-//    if (request == null || request.PageNumber < 0)
-//    {
-//        return BadRequest("Invalid request parameters.");
-//    }
-
-//    DL_STATUS status;
-//    byte[] pageData = new byte[16];
-//    byte[] showData = new byte[4];
-//    UInt16 pageAddress = (UInt16)request.PageNumber;
-
-//    if (request.AuthMode == "NO_AUTH")
-//    {
-//        status = uFCoder.BlockRead(pageData, pageAddress, 0x60, 0);
-//    }
-//    else if (request.AuthMode == "RKA_AUTH")
-//    {
-//        if (!byte.TryParse(request.KeyIndex, out byte keyIndex))
-//        {
-//            return BadRequest("Invalid key index.");
-//        }
-//        status = uFCoder.BlockRead(pageData, pageAddress, 0x61, keyIndex);
-//    }
-//    else if (request.AuthMode == "PK_AUTH")
-//    {
-//        if (string.IsNullOrEmpty(request.Key))
-//        {
-//            return BadRequest("Key is required for PK_AUTH.");
-//        }
-//        byte[] key = ToByteArray(request.Key);
-//        status = uFCoder.BlockRead_PK(pageData, pageAddress, 0x61, key);
-//    }
-//    else
-//    {
-//        return BadRequest("Invalid authentication mode.");
-//    }
-
-//    if (status != DL_STATUS.UFR_OK)
-//    {
-//        return StatusCode(500, $"Error reading data from MIFARE card: {status}");
-//    }
-
-//    Array.Copy(pageData, showData, 4);
-//    string readData = BitConverter.ToString(showData).Replace("-", ":");
-
-//    return Ok(new { Data = readData });
-//}
 

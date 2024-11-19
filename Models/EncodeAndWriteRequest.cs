@@ -12,7 +12,7 @@
         public DateTime StartDate { get; set; } 
         public DateTime EndDate { get; set; }
         public string SourceSystem { get; set; }
-        public string Authorisations_granted { get; set; }
-        public string Authorisations_denied { get; set; }
+        public string? Authorisations_granted { get; set; }
+        public string? Authorisations_denied { get; set; }
     }
 }

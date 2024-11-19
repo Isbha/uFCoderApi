@@ -289,9 +289,10 @@ namespace uFCoderMulti
                                                     UInt16 block_address,
                                                     byte auth_mode,
                                                     byte[] pk_key);
-        // Change the method signature to match what is expected in the uFCoder library (passing by reference)
-        [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall, EntryPoint = "ULC_write_3des_key_factory_keyM")]
-        public static extern DL_STATUS ULC_write_3des_key_factory_keyM(ref byte[] pk_key);
+
+        [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall, EntryPoint = "ULC_write_3des_key_no_auth")]
+        public static extern DL_STATUS ULC_write_3des_key_no_auth(byte[] newKey); 
+
 
     }
 }
