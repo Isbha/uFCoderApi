@@ -18,10 +18,11 @@ namespace uFCoderApi.Controllers
     {
 
         private readonly ISaflok _saflokService;
-
-        public ReaderController(ISaflok saflokService)
+        private readonly ISalto _saltoService;
+        public ReaderController(ISaflok saflokService, ISalto saltoService)
         {
             _saflokService = saflokService;
+            _saltoService = saltoService;
         }
         [HttpPost("openConnection")]
         public IActionResult OpenReader([FromBody] ReaderOpenRequest request)
@@ -34,8 +35,8 @@ namespace uFCoderApi.Controllers
             {
                 return BadRequest("Invalid request parameters.");
             }
-           
-             DL_STATUS status = reader_open_ex(request);
+
+            DL_STATUS status = reader_open_ex(request);
 
             // Map status to response
             if (status != DL_STATUS.UFR_OK)
@@ -103,10 +104,6 @@ namespace uFCoderApi.Controllers
                 return BadRequest("Invalid request parameters.");
             }
 
-            if (request.Data.Length != 4)
-            {
-                return BadRequest("Data must be exactly 4 characters long.");
-            }
 
             if (request.Key.Length != 32)
             {
@@ -145,7 +142,7 @@ namespace uFCoderApi.Controllers
             DL_STATUS status;
             byte[] key = ConvertHexStringToByteArray(request.Key);
             byte pageAddress = (byte)request.PageNumber;
-            byte[] dataRead = new byte[4]; 
+            byte[] dataRead = new byte[4];
 
             status = uFCoder.BlockRead_PK(dataRead, pageAddress, (byte)MIFARE_PLUS_AES_AUTHENTICATION.MIFARE_PLUS_AES_AUTHENT1A, key);
 
@@ -222,11 +219,11 @@ namespace uFCoderApi.Controllers
         [HttpPost("setUltralightCKey")]
         public IActionResult SetUltralightCKey()
         {
-            string hardcodedNewKeyHex = "A1B2C3D4E5F60123456789ABCDEF1234"; 
+            string hardcodedNewKeyHex = "A1B2C3D4E5F60123456789ABCDEF1234";
 
             byte[] newKey = ConvertHexStringToByteArray(hardcodedNewKeyHex);
 
-          
+
             DL_STATUS status = uFCoder.ULC_write_3des_key_no_auth(newKey);
 
             if (status != DL_STATUS.UFR_OK)
@@ -236,8 +233,8 @@ namespace uFCoderApi.Controllers
 
             return Ok("New key successfully set on the Ultralight C card.");
         }
-        [HttpPost("CreateKey")]
-        public async Task<IActionResult> CreateKey([FromBody] KeyCardRequest request, [FromQuery] string username, [FromQuery] string password, [FromQuery] string url)
+        [HttpPost("SaflokWriteDataToUltralightC")]
+        public async Task<IActionResult> SaflokWriteDataToUltralightC([FromBody] KeyCardRequest request, [FromQuery] string username, [FromQuery] string password, [FromQuery] string url)
         {
             if (request == null)
             {
@@ -246,22 +243,89 @@ namespace uFCoderApi.Controllers
 
             try
             {
-                var result = await _saflokService.CreateKey(request, username, password, url);
+               
+                var safLokResult = await _saflokService.CreateKey(request, username, password, url);
 
-                if (result.result)
+                if (!safLokResult.result)
                 {
-                    return Ok(new { message = result.message });
+                    return BadRequest(new { message = safLokResult.message });
                 }
-                else
+
+             
+                byte[] accessKeyData = Convert.FromBase64String(safLokResult.retAccessKey);
+                byte[] keySetData = Convert.FromBase64String(safLokResult.retKeySet);
+
+                byte[] first8Bytes = new byte[8];
+                Array.Copy(keySetData, 0, first8Bytes, 0, 8);
+
+                byte[] second8Bytes = new byte[8];
+                Array.Copy(keySetData, 8, second8Bytes, 0, 8);
+
+                byte nextByte = keySetData[16];
+                byte lastByte = keySetData[17];
+
+              
+                string hardcodedNewKeyHex = "A1B2C3D4E5F60123456789ABCDEF1234";
+                byte[] Key = ConvertHexStringToByteArray(hardcodedNewKeyHex);
+
+                DL_STATUS status;
+
+               
+                for (byte pageAddress = 4; pageAddress <= 39; pageAddress++)
                 {
-                    return BadRequest(new { message = result.message });
+                    int dataStartIndex = (pageAddress - 4) * 4; 
+                    byte[] dataToWrite = accessKeyData.Skip(dataStartIndex).Take(4).ToArray();
+
+                    status = uFCoder.BlockWrite_PK(dataToWrite, pageAddress, (byte)MIFARE_PLUS_AES_AUTHENTICATION.MIFARE_PLUS_AES_AUTHENT1A, Key);
+                    if (status != DL_STATUS.UFR_OK)
+                    {
+                        return StatusCode(500, $"Error writing data to the Ultralight C card at page {pageAddress}: {status}");
+                    }
                 }
+
+                for (byte pageAddress = 44; pageAddress <= 45; pageAddress++)
+                {
+                    status = uFCoder.BlockWrite_PK(first8Bytes, pageAddress, (byte)MIFARE_PLUS_AES_AUTHENTICATION.MIFARE_PLUS_AES_AUTHENT1A, Key);
+                    if (status != DL_STATUS.UFR_OK)
+                    {
+                        return StatusCode(500, $"Error writing data to the Ultralight C card at page {pageAddress}: {status}");
+                    }
+                }
+
+                for (byte pageAddress = 46; pageAddress <= 47; pageAddress++)
+                {
+                    status = uFCoder.BlockWrite_PK(second8Bytes, pageAddress, (byte)MIFARE_PLUS_AES_AUTHENTICATION.MIFARE_PLUS_AES_AUTHENT1A, Key);
+                    if (status != DL_STATUS.UFR_OK)
+                    {
+                        return StatusCode(500, $"Error writing data to the Ultralight C card at page {pageAddress}: {status}");
+                    }
+                }
+
+                status = uFCoder.BlockWrite_PK(new byte[] { nextByte }, 42, (byte)MIFARE_PLUS_AES_AUTHENTICATION.MIFARE_PLUS_AES_AUTHENT1A, Key);
+                if (status != DL_STATUS.UFR_OK)
+                {
+                    return StatusCode(500, $"Error writing data to the Ultralight C card at page 42: {status}");
+                }
+
+                status = uFCoder.BlockWrite_PK(new byte[] { lastByte }, 43, (byte)MIFARE_PLUS_AES_AUTHENTICATION.MIFARE_PLUS_AES_AUTHENT1A, Key);
+                if (status != DL_STATUS.UFR_OK)
+                {
+                    return StatusCode(500, $"Error writing data to the Ultralight C card at page 43: {status}");
+                }
+
+                return Ok(new
+                {
+                    message = "Key and data written successfully to the Ultralight C card.",
+                    AccessKey = safLokResult.retAccessKey,
+                    KeySet = safLokResult.retKeySet
+                });
             }
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = "An error occurred while processing the request.", details = ex.Message });
             }
         }
+
         [HttpPost("encodeAndWrite")]
         public async Task<IActionResult> EncodeAndWrite([FromBody] EncodeAndWriteRequest request)
         {
@@ -275,9 +339,7 @@ namespace uFCoderApi.Controllers
                 return BadRequest("Invalid request parameters.");
             }
 
-            SaltoHelper saltoHelper = new SaltoHelper();
-
-            Response encodeResponse = await saltoHelper.Key_Encode_Binary(
+            Response encodeResponse = await _saltoService.Key_Encode_Binary(
                 request.Server_IP,
                 request.Port,
                 request.CardNumber,

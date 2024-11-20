@@ -85,7 +85,8 @@ namespace SamsoWebhost.Saflok
                     MainRoomNo = cardOperation.RoomNumber,
                     EncoderID = cardOperation.EncoderID,
                     KeyCount = 1,
-                    KeySize = 0,
+                    KeySize = 2,
+                    UID=cardOperation.SerialNumber,
                     BGrantAccessPredefinedSuiteDoors = false,
                     VariableRoomList = new object(),
                     CommonAreaList = new CommonAreaList()
@@ -111,10 +112,6 @@ namespace SamsoWebhost.Saflok
             };
             envelope.S = "http://schemas.xmlsoap.org/soap/envelope/";
             string xml = Serialize(envelope);
-
-
-            // System.IO.File.AppendAllLines(@"C:/temp/log.txt", new string[] { DateTime.Now.ToString() + "-" + " Key request :  ",xml });
-
 
 
             XmlSerializer serializer = new XmlSerializer(typeof(Envelope));
@@ -157,23 +154,25 @@ RemoteCertificateValidationCallback
                 }
                 if (soapResponse != null)
                 {
-                    //System.IO.File.AppendAllLines(@"C:/temp/log.txt", new string[] { DateTime.Now.ToString() + "-" + " Key response :  ", soapResponse });
-
 
                     XmlDocument responsexml = new XmlDocument();
                     responsexml.LoadXml(soapResponse);
+                    var retAccessKey = responsexml.GetElementsByTagName("retAccessKey")?.Item(0)?.InnerText;
+                    var retKeySet = responsexml.GetElementsByTagName("retKeySet")?.Item(0)?.InnerText;
+
                     var result = responsexml.LastChild?.LastChild?.LastChild?.LastChild?.InnerText;
                     if (result != null && result.Contains("SUCCESS"))
                     {
                         return new
                         {
                             result = true,
-                            message = "SUCCESS"
+                            message = "SUCCESS",
+                            retAccessKey = retAccessKey,
+                            retKeySet = retKeySet
                         };
                     }
                     else
                     {
-                        // System.IO.File.AppendAllLines(@"C:/temp/Error.txt", new string[] { DateTime.Now.ToString() + "-" + " Key response :  ", soapResponse });
                         return new
                         {
                             result = false,

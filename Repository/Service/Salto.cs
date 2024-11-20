@@ -3,8 +3,9 @@ using System.Net.Sockets;
 using System.Text;
 using System.Net;
 using System.IO;
+using uFCoderApi.Repository.Interface;
 
-class SaltoHelper
+class Salto:ISalto
 {
 
     readonly char STX = System.Text.Encoding.ASCII.GetChars(new byte[] { 0x02 })[0];
@@ -13,17 +14,17 @@ class SaltoHelper
     readonly char ACK = System.Text.Encoding.ASCII.GetChars(new byte[] { 0x06 })[0];
     readonly char NAK = System.Text.Encoding.ASCII.GetChars(new byte[] { 0x06 })[0];
     readonly char[] ENQ = System.Text.Encoding.Default.GetChars(new byte[] { 0x05 });
-   
+
 
     TcpClient client;
-   
+
     public async Task<Response> Key_Encode_Binary(string Server_IP, int port, string CardNumber, int Cardtype, string Card_Memory_Sector, string Room_Number, bool isMainKey, DateTime StartDate, DateTime EndDate, string SourceSystem, string Authorisations_granted, string Authorisations_denied)
     {
         try
         {
 
 
-           
+
             string Card_structure = "";
 
             if (Cardtype == 1) // Mifare
@@ -91,7 +92,7 @@ class SaltoHelper
             string Message = cSEP + operation + cSEP + CardNumber + cSEP + Card_structure + cSEP + Room_Number + cSEP + Second_room + cSEP
                                     + Third_room + cSEP + Fourth_room + cSEP + Authorisations_granted + cSEP + Authorisations_denied
                                     + cSEP + startDate + cSEP + endDate + cSEP + user + cSEP + cSEP + cSEP + cSEP + cSEP + cSEP + ETX;
-       
+
             char LRC = CalculateLRC(Message);
 
             Message = STX + Message + LRC;
@@ -105,7 +106,7 @@ class SaltoHelper
             var encoding = Encoding.GetEncoding("ISO-8859-1");
             byte[] bytesToSend = encoding.GetBytes(Message);
 
-       
+
             nwStream.Write(bytesToSend, 0, bytesToSend.Length);//---send the text---
 
             byte[] bytesToRead = new byte[client.ReceiveBufferSize];
@@ -114,15 +115,15 @@ class SaltoHelper
 
             if (!string.IsNullOrEmpty(temp_response))
             {
-                
+
                 char[] char_response = temp_response.ToCharArray();
 
                 if (char_response.Length > 0)
                 {
-                    
+
                     if ((char_response[0] == ACK))
                     {
-                        
+
 
                         if (char_response.Length > 0)
                         {
@@ -132,16 +133,16 @@ class SaltoHelper
                                 {
                                     bytesToRead = new byte[client.ReceiveBufferSize];
                                     bytesRead = nwStream.Read(bytesToRead, 0, client.ReceiveBufferSize);
-                                    temp_response =encoding.GetString(bytesToRead, 0, bytesRead);
+                                    temp_response = encoding.GetString(bytesToRead, 0, bytesRead);
                                 }
                                 string[] split = temp_response.Split(cSEP);
-                                
+
 
                                 if (split.Length > 0)
                                 {
                                     if (split[1] == "CNB" || split[1] == "CCB")
                                     {
-                                       
+
 
                                         return new Response()
                                         {
@@ -153,7 +154,7 @@ class SaltoHelper
                                     }
                                     else
                                     {
-                                  
+
                                         string err = "";
                                         switch (split[1])
                                         {
