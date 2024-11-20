@@ -1,9 +1,14 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using System;
 using System.Text;
 using System.Xml.Linq;
 using uFCoderApi.Models;
+using uFCoderApi.Models.Desfire;
 using uFCoderMulti;
 using static System.Runtime.InteropServices.JavaScript.JSType;
+using SamsoWebhost.Saflok;
+using uFCoderApi.Repository.Interface;
+using SamsoWebhost.Saflok.Models;
 
 namespace uFCoderApi.Controllers
 {
@@ -11,6 +16,13 @@ namespace uFCoderApi.Controllers
     [ApiController]
     public class ReaderController : ControllerBase
     {
+
+        private readonly ISaflok _saflokService;
+
+        public ReaderController(ISaflok saflokService)
+        {
+            _saflokService = saflokService;
+        }
         [HttpPost("openConnection")]
         public IActionResult OpenReader([FromBody] ReaderOpenRequest request)
         {
@@ -22,8 +34,8 @@ namespace uFCoderApi.Controllers
             {
                 return BadRequest("Invalid request parameters.");
             }
-
-            DL_STATUS status = reader_open_ex(request);
+           
+             DL_STATUS status = reader_open_ex(request);
 
             // Map status to response
             if (status != DL_STATUS.UFR_OK)
@@ -145,7 +157,67 @@ namespace uFCoderApi.Controllers
 
             return Ok($"Data read successfully: {dataString}");
         }
+        [HttpPost("writeToDesfire")]
+        public IActionResult writeToDesfire([FromBody] WriteDesfireRequest request)
+        {
+            try
+            {
+                // Call the DESFire write function
+                var result = WriteDataToDesfire(request);
 
+                if (result.Status == "Success")
+                    return Ok(new { message = "Data written successfully", execTime = result.ExecutionTime });
+
+                return BadRequest(new { message = "Failed to write data", details = result.Status });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Internal server error", error = ex.Message });
+            }
+        }
+        [HttpPost("readFromDesfire")]
+        public IActionResult readFromDesfire([FromBody] DesfireReadRecordsRequest request)
+        {
+            const int MAX_DATA_LENGTH = 1024;
+            byte[] dataBuffer = new byte[MAX_DATA_LENGTH];
+            ushort cardStatus = 0;
+            ushort execTime = 0;
+
+            try
+            {
+                DL_STATUS status = uFCoder.uFR_SAM_DesfireReadRecordsAesAuth(
+                    request.AesKeyNr,
+                    request.Aid,
+                    request.AidKeyNr,
+                    request.FileId,
+                    request.Offset,
+                    request.NumberOfRecords,
+                    request.RecordSize,
+                    request.CommunicationSettings,
+                    dataBuffer,
+                    ref cardStatus,
+                    ref execTime
+                );
+
+                if (status == DL_STATUS.UFR_OK) // Assuming 0 indicates success
+                {
+                    string readData = System.Text.Encoding.ASCII.GetString(dataBuffer).TrimEnd('\0');
+                    return Ok(new DesfireReadRecordsResponse
+                    {
+                        Status = "Success",
+                        Data = readData,
+                        CardStatus = cardStatus,
+                        ExecTime = execTime
+                    });
+                }
+
+                return BadRequest(new { Status = "Error", Code = status, CardStatus = cardStatus });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Status = "Error", Message = ex.Message });
+            }
+        }
 
         [HttpPost("setUltralightCKey")]
         public IActionResult SetUltralightCKey()
@@ -163,6 +235,32 @@ namespace uFCoderApi.Controllers
             }
 
             return Ok("New key successfully set on the Ultralight C card.");
+        }
+        [HttpPost("CreateKey")]
+        public async Task<IActionResult> CreateKey([FromBody] KeyCardRequest request, [FromQuery] string username, [FromQuery] string password, [FromQuery] string url)
+        {
+            if (request == null)
+            {
+                return BadRequest(new { message = "Invalid request payload." });
+            }
+
+            try
+            {
+                var result = await _saflokService.CreateKey(request, username, password, url);
+
+                if (result.result)
+                {
+                    return Ok(new { message = result.message });
+                }
+                else
+                {
+                    return BadRequest(new { message = result.message });
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while processing the request.", details = ex.Message });
+            }
         }
         [HttpPost("encodeAndWrite")]
         public async Task<IActionResult> EncodeAndWrite([FromBody] EncodeAndWriteRequest request)
@@ -310,7 +408,34 @@ namespace uFCoderApi.Controllers
 
             return byteArray;
         }
+        private WriteResult WriteDataToDesfire(WriteDesfireRequest request)
+        {
+            // Example of using the uFR_SAM_DesfireWriteRecordAesAuth function
+            UInt16 cardStatus = 0;
+            UInt16 execTime = 0;
 
+            // Call the library function
+            DL_STATUS status = uFCoder.uFR_SAM_DesfireWriteRecordAesAuth(
+                request.AesKeyNr,
+                request.Aid,
+                request.AidKeyNr,
+                request.FileId,
+                request.Offset,
+                request.DataLength,
+                request.CommunicationSettings,
+                request.Data,
+                ref cardStatus,
+                ref execTime
+            );
+
+            // Map the status to a result object
+            return new WriteResult
+            {
+                Status = status == DL_STATUS.UFR_OK ? "Success" : status.ToString(),
+                CardStatus = cardStatus,
+                ExecutionTime = execTime
+            };
+        }
         [ApiExplorerSettings(IgnoreApi = true)]
         public static byte[] ToByteArray(string HexString)
         {
@@ -336,6 +461,24 @@ namespace uFCoderApi.Controllers
             }
 
             return bytes;
+        }
+
+        private byte[] StringToByteArray(string str)
+        {
+            // Convert a hexadecimal string to byte array
+            int len = str.Length;
+            byte[] arr = new byte[len / 2];
+            for (int i = 0; i < len; i += 2)
+            {
+                arr[i / 2] = Convert.ToByte(str.Substring(i, 2), 16);
+            }
+            return arr;
+        }
+        public class WriteResult
+        {
+            public string Status { get; set; }
+            public ushort CardStatus { get; set; }
+            public ushort ExecutionTime { get; set; }
         }
 
     }

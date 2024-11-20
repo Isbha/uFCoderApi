@@ -56,18 +56,18 @@ namespace uFCoderMulti
         DL_MIFARE_DESFIRE_EV2_4K = 0x2C,
         DL_MIFARE_DESFIRE_EV2_8K = 0x2D,
         DL_MIFARE_PLUS_S_2K_SL1 = 0x2E,
-        DL_MIFARE_PLUS_X_2K_SL1	= 0x2F,
-        DL_MIFARE_PLUS_EV1_2K_SL1 = 0x30,       
+        DL_MIFARE_PLUS_X_2K_SL1 = 0x2F,
+        DL_MIFARE_PLUS_EV1_2K_SL1 = 0x30,
         DL_MIFARE_PLUS_X_2K_SL2 = 0x31,
-        DL_MIFARE_PLUS_S_2K_SL3	= 0x32,
-        DL_MIFARE_PLUS_X_2K_SL3	= 0x33,
+        DL_MIFARE_PLUS_S_2K_SL3 = 0x32,
+        DL_MIFARE_PLUS_X_2K_SL3 = 0x33,
         DL_MIFARE_PLUS_EV1_2K_SL3 = 0x34,
         DL_MIFARE_PLUS_S_4K_SL1 = 0x35,
-        DL_MIFARE_PLUS_X_4K_SL1	= 0x36,
+        DL_MIFARE_PLUS_X_4K_SL1 = 0x36,
         DL_MIFARE_PLUS_EV1_4K_SL1 = 0x37,
-        DL_MIFARE_PLUS_X_4K_SL2	= 0x38,
-        DL_MIFARE_PLUS_S_4K_SL3	= 0x39,
-        DL_MIFARE_PLUS_X_4K_SL3	= 0x3A,
+        DL_MIFARE_PLUS_X_4K_SL2 = 0x38,
+        DL_MIFARE_PLUS_S_4K_SL3 = 0x39,
+        DL_MIFARE_PLUS_X_4K_SL3 = 0x3A,
         DL_MIFARE_PLUS_EV1_4K_SL3 = 0x3B,
 
         // Special card type
@@ -219,9 +219,9 @@ namespace uFCoderMulti
         //--------------------------------------------------------------------------------------------------
 
         [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall, EntryPoint = "ReaderUISignal")]
-        public static extern DL_STATUS ReaderUISignal(byte light_signal_mode, byte beep_signal_mode); 
+        public static extern DL_STATUS ReaderUISignal(byte light_signal_mode, byte beep_signal_mode);
 
-         [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall, EntryPoint = "GetReaderType")]
+        [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall, EntryPoint = "GetReaderType")]
         public static extern DL_STATUS GetReaderType(uint* lpulReaderType);
 
 
@@ -238,7 +238,7 @@ namespace uFCoderMulti
         [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall, EntryPoint = "GetDlogicCardType")]
         public static extern DL_STATUS GetDlogicCardType(byte* lpucCardType);
 
-       
+
         //---------------------------------------------------------------------
         [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall, EntryPoint = "GetCardIdExM")]
         public static extern DL_STATUS GetCardIdExM(UFR_HANDLE hndUFR,
@@ -246,7 +246,7 @@ namespace uFCoderMulti
                                                     byte* bCardUID,
                                                     byte* bUidSize);
 
-   
+
         //---------------------------------------------------------------------
         [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall, EntryPoint = "GetDllVersion")]
         public static extern uint GetDllVersion();
@@ -291,9 +291,17 @@ namespace uFCoderMulti
                                                     byte[] pk_key);
 
         [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall, EntryPoint = "ULC_write_3des_key_no_auth")]
-        public static extern DL_STATUS ULC_write_3des_key_no_auth(byte[] newKey); 
+        public static extern DL_STATUS ULC_write_3des_key_no_auth(byte[] newKey);
+
+        [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Auto, EntryPoint = "uFR_SAM_DesfireWriteRecordAesAuth")]
+        public static extern DL_STATUS uFR_SAM_DesfireWriteRecordAesAuth(byte aes_key_nr,uint aid,byte aid_key_nr,byte file_id,ushort offset,
+            ushort data_length,byte communication_settings, byte[] data,ref ushort card_status,ref ushort exec_time);
 
 
+        [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Auto, EntryPoint = "uFR_SAM_DesfireReadRecordsAesAuth")]
+        public static extern DL_STATUS uFR_SAM_DesfireReadRecordsAesAuth(byte aes_key_nr,uint aid,byte aid_key_nr,byte file_id,
+            ushort offset,ushort number_of_records,ushort record_size,byte communication_settings,[Out] byte[] data,
+            ref ushort card_status,ref ushort exec_time);
     }
 }
 
