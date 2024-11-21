@@ -115,7 +115,7 @@ namespace uFCoderApi.Controllers
             byte[] key = ConvertHexStringToByteArray(request.Key);
             byte pageAddress = (byte)request.PageNumber;
 
-            // Writing data to the specified page on the Ultralight C card using 3DES key (for Mifare Plus AES)
+           
             status = uFCoder.BlockWrite_PK(dataToWrite, pageAddress, (byte)MIFARE_PLUS_AES_AUTHENTICATION.MIFARE_PLUS_AES_AUTHENT1A, key);
 
             if (status != DL_STATUS.UFR_OK)
@@ -150,16 +150,16 @@ namespace uFCoderApi.Controllers
             {
                 return StatusCode(500, $"Error reading data from the Ultralight C card: {status}");
             }
-            string dataString = Encoding.ASCII.GetString(dataRead);
+            string dataBase64 = Convert.ToBase64String(dataRead);
 
-            return Ok($"Data read successfully: {dataString}");
+            return Ok($"Data read successfully (Base64): {dataBase64}");
         }
         [HttpPost("writeToDesfire")]
         public IActionResult writeToDesfire([FromBody] WriteDesfireRequest request)
         {
             try
             {
-                // Call the DESFire write function
+                
                 var result = WriteDataToDesfire(request);
 
                 if (result.Status == "Success")
@@ -196,7 +196,7 @@ namespace uFCoderApi.Controllers
                     ref execTime
                 );
 
-                if (status == DL_STATUS.UFR_OK) // Assuming 0 indicates success
+                if (status == DL_STATUS.UFR_OK) 
                 {
                     string readData = System.Text.Encoding.ASCII.GetString(dataBuffer).TrimEnd('\0');
                     return Ok(new DesfireReadRecordsResponse
@@ -219,12 +219,17 @@ namespace uFCoderApi.Controllers
         [HttpPost("setUltralightCKey")]
         public IActionResult SetUltralightCKey()
         {
-            string hardcodedNewKeyHex = "A1B2C3D4E5F60123456789ABCDEF1234";
+            string hardcodedOldKeyHex = "A1B2C3D4E5F60123456789ABCDEF1234";
 
+            byte[] oldKey = ConvertHexStringToByteArray(hardcodedOldKeyHex);
+
+            string hardcodedNewKeyHex = "112233445566778899AABBCCDDEEFF00"; 
             byte[] newKey = ConvertHexStringToByteArray(hardcodedNewKeyHex);
 
+            //DL_STATUS status = uFCoder.ULC_write_3des_key_no_auth(newKey);
+            //DL_STATUS status = uFCoder.ULC_write_3des_key_factory_key(newKey);
+            DL_STATUS status = uFCoder.ULC_write_3des_key(newKey,oldKey);
 
-            DL_STATUS status = uFCoder.ULC_write_3des_key_no_auth(newKey);
 
             if (status != DL_STATUS.UFR_OK)
             {
@@ -326,7 +331,7 @@ namespace uFCoderApi.Controllers
             }
         }
 
-        [HttpPost("encodeAndWrite")]
+        [HttpPost("saltoencodeAndWrite")]
         public async Task<IActionResult> EncodeAndWrite([FromBody] EncodeAndWriteRequest request)
         {
             if (request == null ||
@@ -361,29 +366,35 @@ namespace uFCoderApi.Controllers
             string binaryImage = encodeResponse.BinaryImage;
             string[] entries = binaryImage.Split(',');
 
-            for (int i = 1; i < entries.Length; i += 3)
+            if (encodeResponse.CardType == 1)
             {
-
-                if (i + 3 <= entries.Length)
+                for (int i = 1; i < entries.Length; i += 3)
                 {
-                    int sector = int.Parse(entries[i]);
-                    int block = int.Parse(entries[i + 1]);
-                    string data = entries[i + 2];
 
-
-                    WriteMifareRequest writeRequest = new WriteMifareRequest
+                    if (i + 3 <= entries.Length)
                     {
-                        Data = data,
-                        BlockNumber = (sector * 4) + block
-                    };
+                        int sector = int.Parse(entries[i]);
+                        int block = int.Parse(entries[i + 1]);
+                        string data = entries[i + 2];
 
-                    // Write to Mifare
-                    IActionResult writeResult = WriteToMifare(writeRequest);
-                    if (writeResult is BadRequestObjectResult badRequest)
-                    {
-                        return badRequest;
+
+                        WriteMifareRequest writeRequest = new WriteMifareRequest
+                        {
+                            Data = data,
+                            BlockNumber = (sector * 4) + block
+                        };
+
+                        // Write to Mifare
+                        IActionResult writeResult = WriteToMifare(writeRequest);
+                        if (writeResult is BadRequestObjectResult badRequest)
+                        {
+                            return badRequest;
+                        }
                     }
                 }
+            }else if (encodeResponse.CardType == 3)
+            {
+
             }
             return Ok("Binary image written to card successfully.");
         }

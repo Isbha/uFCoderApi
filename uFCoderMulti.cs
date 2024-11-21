@@ -292,7 +292,10 @@ namespace uFCoderMulti
 
         [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall, EntryPoint = "ULC_write_3des_key_no_auth")]
         public static extern DL_STATUS ULC_write_3des_key_no_auth(byte[] newKey);
-
+        [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall, EntryPoint = "ULC_write_3des_key_factory_key")]
+        public static extern DL_STATUS ULC_write_3des_key_factory_key(byte[] newKey);
+        [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall, EntryPoint = "ULC_write_3des_key")]
+        public static extern DL_STATUS ULC_write_3des_key(byte[] newKey, byte[] oldKey);
         [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Auto, EntryPoint = "uFR_SAM_DesfireWriteRecordAesAuth")]
         public static extern DL_STATUS uFR_SAM_DesfireWriteRecordAesAuth(byte aes_key_nr,uint aid,byte aid_key_nr,byte file_id,ushort offset,
             ushort data_length,byte communication_settings, byte[] data,ref ushort card_status,ref ushort exec_time);

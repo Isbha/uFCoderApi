@@ -149,7 +149,8 @@ class Salto:ISalto
                                             Status = true,
                                             ResponseMessage = "Success",
                                             CardNumber = split[2],
-                                            BinaryImage = split[3]
+                                            BinaryImage = split[3],
+                                            CardType=Cardtype
                                         };
                                     }
                                     else
@@ -274,5 +275,6 @@ public class Response
 
     public string CardNumber { get; set; }
     public string BinaryImage { get; set; }
+    public int CardType { get; set; }
 
 }
