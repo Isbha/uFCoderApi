@@ -9,7 +9,6 @@ namespace uFCoderApi.Repository.Interface
 
         Task<dynamic> CreateKey(KeyCardRequest cardOperation, string Username, string password, string url);
 
-        Task<dynamic> AdditionalKey(KeyCardRequest cardOperation, string Username, string password, string url);
     }
 }
 
